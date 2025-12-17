@@ -65,31 +65,31 @@ export function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-dvh bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pb-safe">
       {/* 헤더 */}
-      <header className="sticky top-0 z-10 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700">
-        <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-10 bg-slate-900/90 backdrop-blur-md border-b border-slate-700/50 pt-safe">
+        <div className="w-full px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Plane className="w-6 h-6 text-sky-400" />
-            <h1 className="text-xl font-black text-white">항공권 시세판</h1>
+            <Plane className="w-5 h-5 text-sky-400" />
+            <h1 className="text-lg font-black text-white">항공권 시세판</h1>
           </div>
           <button
             onClick={fetchAllPrices}
             disabled={loading}
-            className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm text-slate-300 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-700/80 active:bg-slate-600 rounded-lg text-xs text-slate-300 transition-colors disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
             새로고침
           </button>
         </div>
       </header>
 
       {/* 메인 컨텐츠 */}
-      <main className="max-w-lg mx-auto px-4 py-6 space-y-4">
+      <main className="w-full px-3 py-4 space-y-3">
         {/* 출발지 배너 */}
-        <div className="bg-sky-500/10 border border-sky-500/20 rounded-lg px-4 py-3 text-center">
-          <p className="text-sky-400 text-sm font-medium">
-            🛫 인천(ICN) 출발 · 주말 2박3일 직항 기준
+        <div className="bg-sky-500/10 border border-sky-500/20 rounded-xl px-3 py-2.5 text-center">
+          <p className="text-sky-400 text-xs font-medium">
+            🛫 인천(ICN) 출발 · 주말 2박3일 직항
           </p>
         </div>
 
@@ -105,12 +105,12 @@ export function App() {
         ))}
 
         {/* 푸터 정보 */}
-        <div className="text-center pt-4 space-y-1">
-          <p className="text-slate-500 text-xs">
-            마지막 업데이트: {lastUpdate || "로딩 중..."}
+        <div className="text-center pt-2 pb-4 space-y-0.5">
+          <p className="text-slate-500 text-[10px]">
+            업데이트: {lastUpdate || "로딩 중..."}
           </p>
-          <p className="text-slate-600 text-xs">
-            6시간마다 자동 수집 · Supabase 연동
+          <p className="text-slate-600 text-[10px]">
+            6시간마다 자동 수집
           </p>
         </div>
       </main>
