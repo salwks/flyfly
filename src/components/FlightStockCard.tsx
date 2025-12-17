@@ -15,6 +15,21 @@ interface FlightStockCardProps {
   emoji?: string;
 }
 
+// 저점 판독기
+function getPriceStatus(current: number, data: PriceData[]) {
+  if (data.length < 3) return { label: "수집중", color: "bg-slate-700", animate: false };
+
+  const prices = data.map((d) => d.price);
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const avg = prices.reduce((a, b) => a + b) / prices.length;
+
+  if (current <= min) return { label: "역대 저점", color: "bg-blue-600", animate: true };
+  if (current < avg * 0.95) return { label: "저점 근접", color: "bg-emerald-600", animate: false };
+  if (current > max * 0.98) return { label: "고점 주의", color: "bg-red-600", animate: false };
+  return { label: "관망", color: "bg-slate-600", animate: false };
+}
+
 export function FlightStockCard({ city, code, data, emoji = "✈️" }: FlightStockCardProps) {
   if (data.length === 0) {
     return (
@@ -39,20 +54,30 @@ export function FlightStockCard({ city, code, data, emoji = "✈️" }: FlightSt
   const isUp = change > 0;
   const isDown = change < 0;
 
-  // 주식 스타일: 하락 = 파란색(매수 기회), 상승 = 빨간색
   const TrendIcon = isUp ? TrendingUp : isDown ? TrendingDown : Minus;
   const priceColor = isUp ? "text-red-400" : isDown ? "text-blue-400" : "text-slate-400";
   const chartColor = isUp ? "#f87171" : isDown ? "#60a5fa" : "#64748b";
-  const bgGlow = isUp ? "shadow-red-500/5" : isDown ? "shadow-blue-500/5" : "";
+
+  // 저점 판독
+  const status = getPriceStatus(currentPrice, data);
 
   return (
-    <div className={`bg-slate-900/80 border border-slate-800/50 rounded-2xl p-3 shadow-lg ${bgGlow} backdrop-blur-sm`}>
+    <div className="bg-slate-900/80 border border-slate-800/50 rounded-2xl p-3 shadow-lg backdrop-blur-sm">
       <div className="flex justify-between items-start">
         {/* 왼쪽: 도시 정보 */}
         <div className="flex items-center gap-2">
           <span className="text-xl">{emoji}</span>
           <div>
-            <h3 className="text-white font-bold text-sm">{city}</h3>
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-white font-bold text-sm">{city}</h3>
+              <span
+                className={`${status.color} text-[8px] px-1.5 py-0.5 rounded-full font-bold text-white ${
+                  status.animate ? "animate-pulse" : ""
+                }`}
+              >
+                {status.label}
+              </span>
+            </div>
             <p className="text-slate-500 text-[10px]">ICN → {code}</p>
           </div>
         </div>
@@ -66,7 +91,8 @@ export function FlightStockCard({ city, code, data, emoji = "✈️" }: FlightSt
           <div className={`flex items-center justify-end gap-0.5 ${priceColor}`}>
             <TrendIcon className="w-3 h-3" />
             <span className="text-[10px] font-bold">
-              {isUp ? "+" : ""}{change.toLocaleString()} ({changePercent}%)
+              {isUp ? "+" : ""}
+              {change.toLocaleString()} ({changePercent}%)
             </span>
           </div>
         </div>

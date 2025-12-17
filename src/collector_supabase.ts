@@ -1,4 +1,4 @@
-// src/collector_supabase.ts - Supabase 버전 항공권 수집기
+// src/collector_supabase.ts - Supabase 버전 항공권 수집기 + 텔레그램 알림
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -20,6 +20,49 @@ const TARGET_CITIES = [
   { code: "GUM", name: "괌" },
   { code: "CDG", name: "파리" },
 ];
+
+// 텔레그램 알림 발송
+async function sendTelegramAlert(city: string, price: number, diff: number, departureDate: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (!token || !chatId) return; // 토큰 없으면 스킵
+
+  const message = `
+🚨 [매수 신호] ${city} 항공권 급락!
+
+✈️ 노선: 인천 → ${city}
+💰 현재가: ${price.toLocaleString()}원
+📉 변동폭: ${diff.toLocaleString()}원 하락
+📅 출발일: ${departureDate}
+
+지금이 예약 찬스! 🔥
+  `.trim();
+
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text: message }),
+    });
+    console.log(`  📱 텔레그램 알림 발송 완료`);
+  } catch (e) {
+    console.error(`  ⚠️ 텔레그램 알림 실패`);
+  }
+}
+
+// 이전 가격 조회
+async function getPreviousPrice(routeCode: string, departureDate: string): Promise<number | null> {
+  const { data } = await supabase
+    .from("price_history")
+    .select("price")
+    .eq("route_code", routeCode)
+    .eq("departure_date", departureDate)
+    .order("recorded_at", { ascending: false })
+    .limit(1);
+
+  return data && data.length > 0 ? data[0].price : null;
+}
 
 // 향후 4번의 주말 (금~일) 날짜 생성
 function getNextWeekends(count = 4) {
@@ -117,6 +160,11 @@ async function run() {
           );
 
           if (result) {
+            // 이전 가격과 비교
+            const prevPrice = await getPreviousPrice(city.code, week.outbound);
+            const diff = prevPrice ? result.price - prevPrice : 0;
+
+            // DB 저장
             const { error } = await supabase.from("price_history").insert({
               route_code: city.code,
               price: result.price,
@@ -127,9 +175,15 @@ async function run() {
             if (error) {
               console.error(`  ❌ [${week.outbound}] DB 에러:`, error.message);
             } else {
+              const diffStr = diff !== 0 ? ` (${diff > 0 ? "+" : ""}${diff.toLocaleString()})` : "";
               console.log(
-                `  ✅ [${week.outbound}] ${result.price.toLocaleString()}원 저장`
+                `  ✅ [${week.outbound}] ${result.price.toLocaleString()}원${diffStr}`
               );
+
+              // 1만원 이상 하락시 텔레그램 알림
+              if (diff < -10000) {
+                await sendTelegramAlert(city.name, result.price, diff, week.outbound);
+              }
             }
           } else {
             console.log(`  ⚠️ [${week.outbound}] 직항 없음`);

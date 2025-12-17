@@ -17,6 +17,15 @@ const CITIES = [
   { code: "CDG", name: "파리", emoji: "🇫🇷" },
 ];
 
+// 카테고리별 도시 그룹
+const CATEGORIES: Record<string, string[]> = {
+  전체: ["HKG", "NRT", "KIX", "FUK", "BKK", "DAD", "TPE", "SIN", "GUM", "CDG"],
+  "일본": ["NRT", "KIX", "FUK"],
+  "동남아": ["BKK", "DAD", "SIN"],
+  "중화권": ["HKG", "TPE"],
+  "휴양지": ["GUM", "CDG"],
+};
+
 interface PriceData {
   time: string;
   price: number;
@@ -28,6 +37,7 @@ export function App() {
   const [priceData, setPriceData] = useState<Record<string, PriceData[]>>({});
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<string>("");
+  const [activeTab, setActiveTab] = useState("전체");
 
   const fetchAllPrices = async () => {
     setLoading(true);
@@ -71,6 +81,11 @@ export function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // 현재 탭에 해당하는 도시만 필터
+  const filteredCities = CITIES.filter((city) =>
+    CATEGORIES[activeTab]?.includes(city.code)
+  );
+
   return (
     <div className="min-h-dvh bg-slate-950 pb-safe">
       {/* 헤더 */}
@@ -79,7 +94,9 @@ export function App() {
           <div className="flex items-center gap-2">
             <Plane className="w-5 h-5 text-emerald-400" />
             <h1 className="text-lg font-black text-white tracking-tight">FLY 시세판</h1>
-            <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold">LIVE</span>
+            <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold">
+              LIVE
+            </span>
           </div>
           <button
             onClick={fetchAllPrices}
@@ -92,7 +109,7 @@ export function App() {
       </header>
 
       {/* 메인 컨텐츠 */}
-      <main className="w-full px-3 py-3 space-y-2">
+      <main className="w-full px-3 py-3 space-y-3">
         {/* 출발지 배너 */}
         <div className="bg-slate-900/50 border border-slate-800/50 rounded-xl px-3 py-2 text-center">
           <p className="text-slate-400 text-[10px] font-medium">
@@ -100,9 +117,26 @@ export function App() {
           </p>
         </div>
 
+        {/* 필터 탭 */}
+        <nav className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+          {Object.keys(CATEGORIES).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap ${
+                activeTab === tab
+                  ? "bg-emerald-500 text-white"
+                  : "bg-slate-800 text-slate-400 active:bg-slate-700"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </nav>
+
         {/* 가격 카드들 */}
         <div className="space-y-2">
-          {CITIES.map((city) => (
+          {filteredCities.map((city) => (
             <FlightStockCard
               key={city.code}
               city={city.name}
@@ -118,9 +152,7 @@ export function App() {
           <p className="text-slate-600 text-[9px]">
             {lastUpdate ? `업데이트: ${lastUpdate}` : "로딩 중..."}
           </p>
-          <p className="text-slate-700 text-[9px]">
-            6시간마다 자동 수집 · Amadeus API
-          </p>
+          <p className="text-slate-700 text-[9px]">6시간마다 자동 수집 · Amadeus API</p>
         </div>
       </main>
     </div>
