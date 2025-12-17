@@ -29,6 +29,17 @@
   }
 }
 
+/* Recharts focus outline 제거 */
+.recharts-wrapper,
+.recharts-surface {
+  outline: none !important;
+}
+
+.recharts-wrapper:focus,
+.recharts-surface:focus {
+  outline: none !important;
+}
+
 @media (prefers-reduced-motion) {
   *,
   ::before,
