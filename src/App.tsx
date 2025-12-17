@@ -8,6 +8,13 @@ const CITIES = [
   { code: "HKG", name: "홍콩", emoji: "🇭🇰" },
   { code: "NRT", name: "도쿄", emoji: "🇯🇵" },
   { code: "KIX", name: "오사카", emoji: "🏯" },
+  { code: "FUK", name: "후쿠오카", emoji: "🌸" },
+  { code: "BKK", name: "방콕", emoji: "🇹🇭" },
+  { code: "DAD", name: "다낭", emoji: "🇻🇳" },
+  { code: "TPE", name: "타이베이", emoji: "🇹🇼" },
+  { code: "SIN", name: "싱가포르", emoji: "🇸🇬" },
+  { code: "GUM", name: "괌", emoji: "🏝️" },
+  { code: "CDG", name: "파리", emoji: "🇫🇷" },
 ];
 
 interface PriceData {
@@ -65,52 +72,54 @@ export function App() {
   }, []);
 
   return (
-    <div className="min-h-dvh bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pb-safe">
+    <div className="min-h-dvh bg-slate-950 pb-safe">
       {/* 헤더 */}
-      <header className="sticky top-0 z-10 bg-slate-900/90 backdrop-blur-md border-b border-slate-700/50 pt-safe">
+      <header className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/50 pt-safe">
         <div className="w-full px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Plane className="w-5 h-5 text-sky-400" />
-            <h1 className="text-lg font-black text-white">항공권 시세판</h1>
+            <Plane className="w-5 h-5 text-emerald-400" />
+            <h1 className="text-lg font-black text-white tracking-tight">FLY 시세판</h1>
+            <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold">LIVE</span>
           </div>
           <button
             onClick={fetchAllPrices}
             disabled={loading}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-700/80 active:bg-slate-600 rounded-lg text-xs text-slate-300 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 active:bg-slate-700 rounded-lg text-xs text-slate-400 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-            새로고침
           </button>
         </div>
       </header>
 
       {/* 메인 컨텐츠 */}
-      <main className="w-full px-3 py-4 space-y-3">
+      <main className="w-full px-3 py-3 space-y-2">
         {/* 출발지 배너 */}
-        <div className="bg-sky-500/10 border border-sky-500/20 rounded-xl px-3 py-2.5 text-center">
-          <p className="text-sky-400 text-xs font-medium">
-            🛫 인천(ICN) 출발 · 주말 2박3일 직항
+        <div className="bg-slate-900/50 border border-slate-800/50 rounded-xl px-3 py-2 text-center">
+          <p className="text-slate-400 text-[10px] font-medium">
+            🛫 인천(ICN) 출발 · 주말 2박3일 · 직항 최저가
           </p>
         </div>
 
         {/* 가격 카드들 */}
-        {CITIES.map((city) => (
-          <FlightStockCard
-            key={city.code}
-            city={city.name}
-            code={city.code}
-            emoji={city.emoji}
-            data={priceData[city.code] || []}
-          />
-        ))}
+        <div className="space-y-2">
+          {CITIES.map((city) => (
+            <FlightStockCard
+              key={city.code}
+              city={city.name}
+              code={city.code}
+              emoji={city.emoji}
+              data={priceData[city.code] || []}
+            />
+          ))}
+        </div>
 
         {/* 푸터 정보 */}
-        <div className="text-center pt-2 pb-4 space-y-0.5">
-          <p className="text-slate-500 text-[10px]">
-            업데이트: {lastUpdate || "로딩 중..."}
+        <div className="text-center pt-3 pb-4 space-y-0.5">
+          <p className="text-slate-600 text-[9px]">
+            {lastUpdate ? `업데이트: ${lastUpdate}` : "로딩 중..."}
           </p>
-          <p className="text-slate-600 text-[10px]">
-            6시간마다 자동 수집
+          <p className="text-slate-700 text-[9px]">
+            6시간마다 자동 수집 · Amadeus API
           </p>
         </div>
       </main>

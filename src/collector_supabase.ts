@@ -12,6 +12,13 @@ const TARGET_CITIES = [
   { code: "HKG", name: "홍콩" },
   { code: "NRT", name: "도쿄" },
   { code: "KIX", name: "오사카" },
+  { code: "FUK", name: "후쿠오카" },
+  { code: "BKK", name: "방콕" },
+  { code: "DAD", name: "다낭" },
+  { code: "TPE", name: "타이베이" },
+  { code: "SIN", name: "싱가포르" },
+  { code: "GUM", name: "괌" },
+  { code: "CDG", name: "파리" },
 ];
 
 // 향후 4번의 주말 (금~일) 날짜 생성
