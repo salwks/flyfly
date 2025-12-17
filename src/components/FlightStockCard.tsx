@@ -115,10 +115,21 @@ export function FlightStockCard({ city, code, data, emoji = "✈️" }: FlightSt
         </ResponsiveContainer>
       </div>
 
-      {/* 하단 정보 */}
-      <div className="flex justify-between text-[9px] text-slate-600 mt-1">
-        <span>최저 {minPrice.toLocaleString()}</span>
-        <span>최고 {maxPrice.toLocaleString()}</span>
+      {/* 하단 정보 + 예약 버튼 */}
+      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/50">
+        <div className="text-[9px] text-slate-600">
+          <span>최저 {minPrice.toLocaleString()}</span>
+          <span className="mx-1">·</span>
+          <span>최고 {maxPrice.toLocaleString()}</span>
+        </div>
+        <a
+          href={`https://www.skyscanner.co.kr/transport/flights/icn/${code.toLowerCase()}/`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-[10px] font-bold rounded-lg transition-colors"
+        >
+          예약하기
+        </a>
       </div>
     </div>
   );
