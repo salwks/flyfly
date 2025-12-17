@@ -1,4 +1,4 @@
-import { LineChart, Line, ResponsiveContainer, YAxis, Tooltip } from "recharts";
+import { LineChart, Line, ResponsiveContainer, YAxis, XAxis, Tooltip } from "recharts";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 interface PriceData {
@@ -102,10 +102,11 @@ export function FlightStockCard({ city, code, data, emoji = "✈️" }: FlightSt
       <div className="h-12 mt-2 -mx-1 outline-none" style={{ outline: "none" }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} style={{ outline: "none" }}>
+            <XAxis dataKey="time" hide />
             <YAxis domain={[minPrice * 0.98, maxPrice * 1.02]} hide />
             <Tooltip
               formatter={(value: number) => [`${value.toLocaleString()}원`, "가격"]}
-              labelFormatter={(label) => `${label}`}
+              labelFormatter={(label) => `수집: ${label}`}
               contentStyle={{
                 backgroundColor: "#1e293b",
                 border: "1px solid #334155",
