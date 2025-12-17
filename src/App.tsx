@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
+import { supabase } from "./lib/supabase";
 import { FlightStockCard } from "./components/FlightStockCard";
 import { Plane, RefreshCw } from "lucide-react";
 import "./index.css";
-
-const API_BASE = "http://localhost:4000";
 
 const CITIES = [
   { code: "HKG", name: "홍콩", emoji: "🇭🇰" },
@@ -29,9 +28,25 @@ export function App() {
       const results: Record<string, PriceData[]> = {};
 
       for (const city of CITIES) {
-        const res = await fetch(`${API_BASE}/api/prices?route=${city.code}`);
-        if (res.ok) {
-          results[city.code] = await res.json();
+        const { data, error } = await supabase
+          .from("price_history")
+          .select("*")
+          .eq("route_code", city.code)
+          .order("recorded_at", { ascending: true })
+          .limit(30);
+
+        if (!error && data) {
+          results[city.code] = data.map((row: any) => ({
+            time: new Date(row.recorded_at).toLocaleString("ko-KR", {
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            price: row.price,
+            departure_date: row.departure_date,
+            return_date: row.return_date,
+          }));
         }
       }
 
@@ -45,7 +60,6 @@ export function App() {
 
   useEffect(() => {
     fetchAllPrices();
-    // 5분마다 자동 새로고침
     const interval = setInterval(fetchAllPrices, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -96,7 +110,7 @@ export function App() {
             마지막 업데이트: {lastUpdate || "로딩 중..."}
           </p>
           <p className="text-slate-600 text-xs">
-            데이터 출처: Amadeus API (테스트 환경)
+            6시간마다 자동 수집 · Supabase 연동
           </p>
         </div>
       </main>
