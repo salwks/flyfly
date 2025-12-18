@@ -362,11 +362,11 @@ export function App() {
           </div>
 
           {/* 푸터 정보 */}
-          <div className="text-center pt-3 pb-4 space-y-0.5">
+          <div className="text-center pt-3 pb-4 space-y-1">
             <p className="text-slate-600 text-[9px]">
               {lastUpdate ? `업데이트: ${lastUpdate}` : "로딩 중..."}
             </p>
-            <p className="text-slate-700 text-[9px]">6시간마다 자동 수집 · Amadeus API</p>
+            <p className="text-slate-700 text-[9px]">© Serious Lab</p>
           </div>
         </main>
       </div>
