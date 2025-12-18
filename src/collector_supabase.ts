@@ -60,6 +60,7 @@ async function sendToMakeWebhook(
         departure_date: departureDate,
         booking_url: `https://www.skyscanner.co.kr/transport/flights/icn/${cityCode.toLowerCase()}/`,
         dashboard_url: "https://flyfly.vercel.app",
+        og_image_url: `https://flyfly.vercel.app/api/og?city=${encodeURIComponent(city)}&price=${price}&drop=${Math.abs(diff)}&date=${departureDate}`,
         timestamp: new Date().toISOString(),
       }),
     });
