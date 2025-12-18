@@ -34,7 +34,7 @@ const TARGET_WEEKS = 2; // 향후 2주 주말만 수집 (4주 → 2주 축소)
 // Normal: 7도시 × 2주 × 1회/일 × 30일 = 420회
 // Total: 1,140회/월 (무료 한도 2,000회 대비 57%)
 
-// 텔레그램 알림 발송 (유저 친화적 버전)
+// 텔레그램 알림 발송 (이미지 + 버튼 버전)
 async function sendTelegramAlert(
   city: string,
   cityCode: string,
@@ -50,17 +50,35 @@ async function sendTelegramAlert(
   const dropPercent = Math.abs(Math.round((diff / (price - diff)) * 100));
   const bookingUrl = `https://www.skyscanner.co.kr/transport/flights/icn/${cityCode.toLowerCase()}/`;
 
-  const message = `
-✈️ *[FLY TICKER] ${city} 항공권 급락!*
+  // 동적 이미지 생성 (quickchart.io 활용)
+  const chartData = {
+    type: "bar",
+    data: {
+      labels: ["이전 가격", "현재 가격"],
+      datasets: [{
+        data: [price - diff, price],
+        backgroundColor: ["#64748b", "#10b981"],
+      }],
+    },
+    options: {
+      plugins: {
+        title: { display: true, text: `${city} 항공권 ${dropPercent}% 하락!`, font: { size: 24 } },
+        legend: { display: false },
+      },
+    },
+  };
+  const imageUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartData))}&w=600&h=400&bkg=white`;
 
-${city}행 항공권 가격이 떨어졌습니다! 📉
-평소보다 *${dropPercent}%* 더 저렴해요.
+  const caption = `
+✈️ *[FLY TICKER] 역대급 특가 포착!*
 
-💰 *현재가: ${price.toLocaleString()}원*
-📉 변동: ${Math.abs(diff).toLocaleString()}원 하락!
+📍 노선: 인천 → ${city} (${cityCode})
+💰 현재가: *${price.toLocaleString()}원*
+📉 하락폭: *-${Math.abs(diff).toLocaleString()}원* (${dropPercent}%)
 📅 출발일: ${departureDate}
 
-⚡ 망설이는 사이 가격이 다시 오를 수 있어요!
+⚠️ 이 가격은 보통 1시간 이내에 사라집니다!
+지금 바로 확인하세요!
   `.trim();
 
   const replyMarkup = {
@@ -73,17 +91,19 @@ ${city}행 항공권 가격이 떨어졌습니다! 📉
   };
 
   try {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    // 이미지와 함께 전송
+    await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: chatId,
-        text: message,
+        photo: imageUrl,
+        caption: caption,
         parse_mode: "Markdown",
         reply_markup: replyMarkup,
       }),
     });
-    console.log(`  📱 텔레그램 알림 발송 완료`);
+    console.log(`  📱 텔레그램 이미지 알림 발송 완료`);
   } catch (e) {
     console.error(`  ⚠️ 텔레그램 알림 실패`);
   }
