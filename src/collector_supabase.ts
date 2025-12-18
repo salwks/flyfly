@@ -34,6 +34,41 @@ const TARGET_WEEKS = 2; // 향후 2주 주말만 수집 (4주 → 2주 축소)
 // Normal: 7도시 × 2주 × 1회/일 × 30일 = 420회
 // Total: 1,140회/월 (무료 한도 2,000회 대비 57%)
 
+// Make.com Webhook으로 특가 데이터 전송
+async function sendToMakeWebhook(
+  city: string,
+  cityCode: string,
+  price: number,
+  diff: number,
+  departureDate: string
+) {
+  const webhookUrl = process.env.MAKE_WEBHOOK_URL;
+  if (!webhookUrl) return;
+
+  const dropPercent = Math.abs(Math.round((diff / (price - diff)) * 100));
+
+  try {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        city_name: city,
+        city_code: cityCode,
+        price: price,
+        drop_amount: Math.abs(diff),
+        drop_percent: dropPercent,
+        departure_date: departureDate,
+        booking_url: `https://www.skyscanner.co.kr/transport/flights/icn/${cityCode.toLowerCase()}/`,
+        dashboard_url: "https://flyfly.vercel.app",
+        timestamp: new Date().toISOString(),
+      }),
+    });
+    console.log(`  🔗 Make.com Webhook 전송 완료`);
+  } catch (e) {
+    console.error(`  ⚠️ Webhook 전송 실패`);
+  }
+}
+
 // 텔레그램 알림 발송 (이미지 + 버튼 버전)
 async function sendTelegramAlert(
   city: string,
@@ -238,6 +273,7 @@ async function collectCities(
 
             if (diff < -10000) {
               await sendTelegramAlert(city.name, city.code, result.price, diff, week.outbound);
+              await sendToMakeWebhook(city.name, city.code, result.price, diff, week.outbound);
             }
           }
         } else {
