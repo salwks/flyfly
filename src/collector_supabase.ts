@@ -1,5 +1,6 @@
 // src/collector_supabase.ts - 하이브리드 수집 엔진 (Amadeus 2,000회/월 최적화)
 import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -67,6 +68,82 @@ async function sendToMakeWebhook(
     console.log(`  🔗 Make.com Webhook 전송 완료`);
   } catch (e) {
     console.error(`  ⚠️ Webhook 전송 실패`);
+  }
+}
+
+// Twitter/X 포스팅
+async function postToTwitter(
+  city: string,
+  cityCode: string,
+  price: number,
+  diff: number,
+  departureDate: string
+) {
+  const apiKey = process.env.X_API_KEY;
+  const apiSecret = process.env.X_API_SECRET;
+  const accessToken = process.env.X_ACCESS_TOKEN;
+  const accessSecret = process.env.X_ACCESS_SECRET;
+
+  if (!apiKey || !apiSecret || !accessToken || !accessSecret) return;
+
+  const dropPercent = Math.abs(Math.round((diff / (price - diff)) * 100));
+  const bookingUrl = `https://www.skyscanner.co.kr/transport/flights/icn/${cityCode.toLowerCase()}/`;
+
+  const tweetText = `✈️ ${city} 항공권 특가!
+
+💰 ${price.toLocaleString()}원
+📉 ${Math.abs(diff).toLocaleString()}원 하락 (${dropPercent}%)
+📅 ${departureDate} 출발
+
+예약 👉 ${bookingUrl}
+시세 👉 https://flyfly.vercel.app
+
+#항공권특가 #${city}여행 #해외여행`;
+
+  // OAuth 1.0a 서명 생성
+  const oauth = {
+    oauth_consumer_key: apiKey,
+    oauth_nonce: crypto.randomBytes(16).toString("hex"),
+    oauth_signature_method: "HMAC-SHA1",
+    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
+    oauth_token: accessToken,
+    oauth_version: "1.0",
+  };
+
+  const baseUrl = "https://api.twitter.com/2/tweets";
+
+  // 서명 베이스 문자열 생성
+  const paramString = Object.keys(oauth)
+    .sort()
+    .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(oauth[k as keyof typeof oauth])}`)
+    .join("&");
+
+  const signatureBase = `POST&${encodeURIComponent(baseUrl)}&${encodeURIComponent(paramString)}`;
+  const signingKey = `${encodeURIComponent(apiSecret)}&${encodeURIComponent(accessSecret)}`;
+  const signature = crypto.createHmac("sha1", signingKey).update(signatureBase).digest("base64");
+
+  const authHeader = `OAuth ${Object.keys(oauth)
+    .map((k) => `${encodeURIComponent(k)}="${encodeURIComponent(oauth[k as keyof typeof oauth])}"`)
+    .join(", ")}, oauth_signature="${encodeURIComponent(signature)}"`;
+
+  try {
+    const response = await fetch(baseUrl, {
+      method: "POST",
+      headers: {
+        Authorization: authHeader,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text: tweetText }),
+    });
+
+    if (response.ok) {
+      console.log(`  🐦 Twitter 포스팅 완료`);
+    } else {
+      const error = await response.text();
+      console.error(`  ⚠️ Twitter 포스팅 실패:`, error);
+    }
+  } catch (e) {
+    console.error(`  ⚠️ Twitter 포스팅 에러`);
   }
 }
 
@@ -275,6 +352,7 @@ async function collectCities(
             if (diff < -10000) {
               await sendTelegramAlert(city.name, city.code, result.price, diff, week.outbound);
               await sendToMakeWebhook(city.name, city.code, result.price, diff, week.outbound);
+              await postToTwitter(city.name, city.code, result.price, diff, week.outbound);
             }
           }
         } else {
