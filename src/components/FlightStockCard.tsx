@@ -43,13 +43,30 @@ export function FlightStockCard({ city, code, data, emoji = "✈️" }: FlightSt
     );
   }
 
-  const currentPrice = data[data.length - 1]?.price || 0;
+  const latestData = data[data.length - 1];
+  const currentPrice = latestData?.price || 0;
   const previousPrice = data.length > 1 ? data[data.length - 2]?.price : currentPrice;
   const change = currentPrice - previousPrice;
   const changePercent = previousPrice > 0 ? ((change / previousPrice) * 100).toFixed(1) : "0.0";
 
   const minPrice = Math.min(...data.map((d) => d.price));
   const maxPrice = Math.max(...data.map((d) => d.price));
+
+  // Skyscanner URL용 날짜 포맷 (YYMMDD)
+  const formatDateForUrl = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const yy = String(date.getFullYear()).slice(-2);
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return `${yy}${mm}${dd}`;
+  };
+
+  const departureDate = latestData?.departure_date;
+  const returnDate = latestData?.return_date;
+
+  const bookingUrl = departureDate && returnDate
+    ? `https://www.skyscanner.co.kr/transport/flights/icn/${code.toLowerCase()}/${formatDateForUrl(departureDate)}/${formatDateForUrl(returnDate)}/`
+    : `https://www.skyscanner.co.kr/transport/flights/icn/${code.toLowerCase()}/`;
 
   const isUp = change > 0;
   const isDown = change < 0;
@@ -98,7 +115,7 @@ export function FlightStockCard({ city, code, data, emoji = "✈️" }: FlightSt
             </div>
           </div>
           <a
-            href={`https://www.skyscanner.co.kr/transport/flights/icn/${code.toLowerCase()}/`}
+            href={bookingUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="px-2.5 py-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-[10px] font-bold rounded-lg transition-colors whitespace-nowrap"
