@@ -338,21 +338,28 @@ export function App() {
           {/* SNS 공유 카드 */}
           <ShareCard deals={topDeals} />
 
-          {/* 텔레그램 알림 구독 */}
-          <a
-            href="https://t.me/fffly_bot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 mt-3 px-4 py-3 bg-[#0088cc]/10 hover:bg-[#0088cc]/20 border border-[#0088cc]/30 rounded-xl transition-colors"
-          >
-            <svg className="w-5 h-5 text-[#0088cc]" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-            </svg>
-            <div className="text-left">
-              <p className="text-[#0088cc] text-xs font-bold">특가 알림 받기</p>
-              <p className="text-slate-500 text-[10px]">텔레그램으로 급락 알림을 받아보세요</p>
+          {/* 텔레그램 알림 배너 */}
+          <div className="mt-3 p-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl text-white shadow-lg shadow-blue-500/20">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
+                <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                </svg>
+              </div>
+              <div>
+                <h4 className="font-bold text-sm">실시간 특가 알림</h4>
+                <p className="text-white/70 text-[10px]">24시간 감시 봇이 최저가를 알려드려요</p>
+              </div>
             </div>
-          </a>
+            <a
+              href="https://t.me/fffly_bot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full py-2.5 bg-white text-blue-600 text-xs font-bold text-center rounded-lg hover:bg-blue-50 active:scale-[0.98] transition-all"
+            >
+              텔레그램으로 알림 받기
+            </a>
+          </div>
 
           {/* 푸터 정보 */}
           <div className="text-center pt-3 pb-4 space-y-0.5">
