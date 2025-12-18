@@ -34,29 +34,54 @@ const TARGET_WEEKS = 2; // 향후 2주 주말만 수집 (4주 → 2주 축소)
 // Normal: 7도시 × 2주 × 1회/일 × 30일 = 420회
 // Total: 1,140회/월 (무료 한도 2,000회 대비 57%)
 
-// 텔레그램 알림 발송
-async function sendTelegramAlert(city: string, price: number, diff: number, departureDate: string) {
+// 텔레그램 알림 발송 (유저 친화적 버전)
+async function sendTelegramAlert(
+  city: string,
+  cityCode: string,
+  price: number,
+  diff: number,
+  departureDate: string
+) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
-  if (!token || !chatId) return; // 토큰 없으면 스킵
+  if (!token || !chatId) return;
+
+  const dropPercent = Math.abs(Math.round((diff / (price - diff)) * 100));
+  const bookingUrl = `https://www.skyscanner.co.kr/transport/flights/icn/${cityCode.toLowerCase()}/`;
 
   const message = `
-🚨 [매수 신호] ${city} 항공권 급락!
+✈️ *[FLY TICKER] ${city} 항공권 급락!*
 
-✈️ 노선: 인천 → ${city}
-💰 현재가: ${price.toLocaleString()}원
-📉 변동폭: ${diff.toLocaleString()}원 하락
+${city}행 항공권 가격이 떨어졌습니다! 📉
+평소보다 *${dropPercent}%* 더 저렴해요.
+
+💰 *현재가: ${price.toLocaleString()}원*
+📉 변동: ${Math.abs(diff).toLocaleString()}원 하락!
 📅 출발일: ${departureDate}
 
-지금이 예약 찬스! 🔥
+⚡ 망설이는 사이 가격이 다시 오를 수 있어요!
   `.trim();
+
+  const replyMarkup = {
+    inline_keyboard: [
+      [
+        { text: "📈 실시간 시세", url: "https://flyfly.vercel.app" },
+        { text: "✈️ 바로 예약", url: bookingUrl },
+      ],
+    ],
+  };
 
   try {
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text: message }),
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: "Markdown",
+        reply_markup: replyMarkup,
+      }),
     });
     console.log(`  📱 텔레그램 알림 발송 완료`);
   } catch (e) {
@@ -192,7 +217,7 @@ async function collectCities(
             console.log(`  ✅ [${week.outbound}] ${result.price.toLocaleString()}원${diffStr}`);
 
             if (diff < -10000) {
-              await sendTelegramAlert(city.name, result.price, diff, week.outbound);
+              await sendTelegramAlert(city.name, city.code, result.price, diff, week.outbound);
             }
           }
         } else {
