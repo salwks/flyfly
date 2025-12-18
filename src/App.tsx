@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { HelmetProvider, Helmet } from "react-helmet-async";
 import { supabase } from "./lib/supabase";
 import { FlightStockCard } from "./components/FlightStockCard";
-import { Plane, RefreshCw, Activity } from "lucide-react";
+import { ShareCard } from "./components/ShareCard";
+import { Plane, RefreshCw } from "lucide-react";
 import "./index.css";
 
 // 하이브리드 엔진 모니터링 대시보드
@@ -204,6 +205,27 @@ export function App() {
 
   const cheapest = getCheapestCity();
 
+  // SNS 공유용 TOP 3 최저가
+  const getTopDeals = () => {
+    const deals: { city: string; code: string; price: number; emoji: string }[] = [];
+
+    for (const city of CITIES) {
+      const data = priceData[city.code];
+      if (data && data.length > 0) {
+        deals.push({
+          city: city.name,
+          code: city.code,
+          price: data[data.length - 1].price,
+          emoji: city.emoji,
+        });
+      }
+    }
+
+    return deals.sort((a, b) => a.price - b.price).slice(0, 3);
+  };
+
+  const topDeals = getTopDeals();
+
   const seoTitle = cheapest
     ? `${cheapest.name} 항공권 ${cheapest.price.toLocaleString()}원! | FLY 시세판`
     : "FLY 시세판 - 인천발 항공권 실시간 최저가";
@@ -312,6 +334,9 @@ export function App() {
               />
             ))}
           </div>
+
+          {/* SNS 공유 카드 */}
+          <ShareCard deals={topDeals} />
 
           {/* 푸터 정보 */}
           <div className="text-center pt-3 pb-4 space-y-0.5">
