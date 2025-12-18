@@ -82,19 +82,29 @@ export function FlightStockCard({ city, code, data, emoji = "✈️" }: FlightSt
           </div>
         </div>
 
-        {/* 오른쪽: 가격 */}
-        <div className="text-right">
-          <p className={`text-lg font-black ${priceColor}`}>
-            {currentPrice.toLocaleString()}
-            <span className="text-[10px] font-normal text-slate-500">원</span>
-          </p>
-          <div className={`flex items-center justify-end gap-0.5 ${priceColor}`}>
-            <TrendIcon className="w-3 h-3" />
-            <span className="text-[10px] font-bold">
-              {isUp ? "+" : ""}
-              {change.toLocaleString()} ({changePercent}%)
-            </span>
+        {/* 오른쪽: 가격 + 예약 버튼 */}
+        <div className="text-right flex items-center gap-2">
+          <div>
+            <p className={`text-lg font-black ${priceColor}`}>
+              {currentPrice.toLocaleString()}
+              <span className="text-[10px] font-normal text-slate-500">원</span>
+            </p>
+            <div className={`flex items-center justify-end gap-0.5 ${priceColor}`}>
+              <TrendIcon className="w-3 h-3" />
+              <span className="text-[10px] font-bold">
+                {isUp ? "+" : ""}
+                {change.toLocaleString()} ({changePercent}%)
+              </span>
+            </div>
           </div>
+          <a
+            href={`https://www.skyscanner.co.kr/transport/flights/icn/${code.toLowerCase()}/`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-2.5 py-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-[10px] font-bold rounded-lg transition-colors whitespace-nowrap"
+          >
+            예약
+          </a>
         </div>
       </div>
 
@@ -130,21 +140,13 @@ export function FlightStockCard({ city, code, data, emoji = "✈️" }: FlightSt
         </ResponsiveContainer>
       </div>
 
-      {/* 하단 정보 + 예약 버튼 */}
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/50">
-        <div className="text-[9px] text-slate-600">
+      {/* 하단 정보 */}
+      <div className="mt-2 pt-2 border-t border-slate-800/50">
+        <div className="text-[9px] text-slate-600 text-center">
           <span>최저 {minPrice.toLocaleString()}</span>
           <span className="mx-1">·</span>
           <span>최고 {maxPrice.toLocaleString()}</span>
         </div>
-        <a
-          href={`https://www.skyscanner.co.kr/transport/flights/icn/${code.toLowerCase()}/`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-[10px] font-bold rounded-lg transition-colors"
-        >
-          예약하기
-        </a>
       </div>
     </div>
   );
