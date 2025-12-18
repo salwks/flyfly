@@ -2,8 +2,70 @@ import { useEffect, useState } from "react";
 import { HelmetProvider, Helmet } from "react-helmet-async";
 import { supabase } from "./lib/supabase";
 import { FlightStockCard } from "./components/FlightStockCard";
-import { Plane, RefreshCw } from "lucide-react";
+import { Plane, RefreshCw, Activity } from "lucide-react";
 import "./index.css";
+
+// 하이브리드 엔진 모니터링 대시보드
+function MonitoringDashboard({ totalRecords }: { totalRecords: number }) {
+  const usagePercent = Math.min((totalRecords / 2000) * 100, 100);
+  const isWarning = usagePercent > 80;
+
+  const CORE_CITIES = ["NRT", "KIX", "HKG"];
+  const NORMAL_CITIES = ["FUK", "BKK", "DAD", "TPE", "SIN", "GUM", "CDG"];
+
+  return (
+    <div className="bg-slate-900/50 border border-slate-800/50 rounded-xl p-3 mb-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            Hybrid Engine
+          </span>
+        </div>
+        <span className="text-[9px] font-mono text-slate-600">v1.0</span>
+      </div>
+
+      {/* API 사용량 게이지 */}
+      <div className="mb-3">
+        <div className="flex justify-between text-[9px] font-mono mb-1">
+          <span className="text-slate-500">AMADEUS API</span>
+          <span className={isWarning ? "text-orange-400" : "text-emerald-400"}>
+            {totalRecords.toLocaleString()} / 2,000 ({usagePercent.toFixed(0)}%)
+          </span>
+        </div>
+        <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+          <div
+            className={`h-full transition-all duration-500 ${isWarning ? "bg-orange-500" : "bg-emerald-500"}`}
+            style={{ width: `${usagePercent}%` }}
+          />
+        </div>
+      </div>
+
+      {/* 도시별 수집 주기 */}
+      <div className="flex flex-wrap gap-1">
+        {CORE_CITIES.map((code) => (
+          <span
+            key={code}
+            className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-[8px] font-bold rounded"
+          >
+            {code} ⚡6H
+          </span>
+        ))}
+        {NORMAL_CITIES.map((code) => (
+          <span
+            key={code}
+            className="px-1.5 py-0.5 bg-slate-700/50 text-slate-500 text-[8px] font-bold rounded"
+          >
+            {code} 24H
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const CITIES = [
   { code: "HKG", name: "홍콩", emoji: "🇭🇰" },
@@ -40,6 +102,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState("전체");
   const [departureDates, setDepartureDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [totalRecords, setTotalRecords] = useState(0);
 
   const fetchDepartureDates = async () => {
     // 모든 고유 출발일 가져오기
@@ -55,6 +118,16 @@ export function App() {
         setSelectedDate(uniqueDates[0]);
       }
     }
+
+    // 이번 달 총 레코드 수 (API 사용량 추적)
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const { count } = await supabase
+      .from("price_history")
+      .select("*", { count: "exact", head: true })
+      .gte("recorded_at", startOfMonth);
+
+    setTotalRecords(count || 0);
   };
 
   const fetchAllPrices = async (targetDate?: string) => {
@@ -181,6 +254,9 @@ export function App() {
 
         {/* 메인 컨텐츠 */}
         <main className="w-full px-3 py-3 space-y-3">
+          {/* 모니터링 대시보드 */}
+          <MonitoringDashboard totalRecords={totalRecords} />
+
           {/* 출발지 배너 + 날짜 선택 */}
           <div className="bg-slate-900/50 border border-slate-800/50 rounded-xl px-3 py-2.5">
             <p className="text-slate-400 text-[10px] font-medium text-center mb-2">
