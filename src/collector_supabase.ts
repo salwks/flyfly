@@ -1,4 +1,4 @@
-// src/collector_supabase.ts - Supabase 버전 항공권 수집기 + 텔레그램 알림
+// src/collector_supabase.ts - 하이브리드 수집 엔진 (Amadeus 2,000회/월 최적화)
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -8,10 +8,16 @@ const supabase = createClient(
 
 const AMADEUS_BASE_URL = "https://test.api.amadeus.com";
 
-const TARGET_CITIES = [
-  { code: "HKG", name: "홍콩" },
+// 🎯 하이브리드 수집 전략
+// - Core: 6시간마다 수집 (인기 노선, 변동성 높음)
+// - Normal: 24시간마다 수집 (09시 KST에만)
+const CORE_CITIES = [
   { code: "NRT", name: "도쿄" },
   { code: "KIX", name: "오사카" },
+  { code: "HKG", name: "홍콩" },
+];
+
+const NORMAL_CITIES = [
   { code: "FUK", name: "후쿠오카" },
   { code: "BKK", name: "방콕" },
   { code: "DAD", name: "다낭" },
@@ -20,6 +26,13 @@ const TARGET_CITIES = [
   { code: "GUM", name: "괌" },
   { code: "CDG", name: "파리" },
 ];
+
+const TARGET_WEEKS = 2; // 향후 2주 주말만 수집 (4주 → 2주 축소)
+
+// 월간 API 호출량 계산:
+// Core: 3도시 × 2주 × 4회/일 × 30일 = 720회
+// Normal: 7도시 × 2주 × 1회/일 × 30일 = 420회
+// Total: 1,140회/월 (무료 한도 2,000회 대비 57%)
 
 // 텔레그램 알림 발송
 async function sendTelegramAlert(city: string, price: number, diff: number, departureDate: string) {
@@ -64,8 +77,8 @@ async function getPreviousPrice(routeCode: string, departureDate: string): Promi
   return data && data.length > 0 ? data[0].price : null;
 }
 
-// 향후 4번의 주말 (금~일) 날짜 생성
-function getNextWeekends(count = 4) {
+// 향후 N번의 주말 (금~일) 날짜 생성
+function getNextWeekends(count = TARGET_WEEKS) {
   const dates: { outbound: string; inbound: string }[] = [];
   let current = new Date();
 
@@ -137,67 +150,105 @@ async function fetchFlightPrice(
   };
 }
 
-// 메인 실행
+// 도시 그룹 수집 함수
+async function collectCities(
+  token: string,
+  cities: { code: string; name: string }[],
+  weekends: { outbound: string; inbound: string }[],
+  groupName: string
+) {
+  console.log(`\n📦 ${groupName} 수집 시작 (${cities.length}개 도시)\n`);
+
+  let apiCalls = 0;
+
+  for (const city of cities) {
+    console.log(`📍 ${city.name} (${city.code})`);
+
+    for (const week of weekends) {
+      try {
+        const result = await fetchFlightPrice(
+          token,
+          city.code,
+          week.outbound,
+          week.inbound
+        );
+        apiCalls++;
+
+        if (result) {
+          const prevPrice = await getPreviousPrice(city.code, week.outbound);
+          const diff = prevPrice ? result.price - prevPrice : 0;
+
+          const { error } = await supabase.from("price_history").insert({
+            route_code: city.code,
+            price: result.price,
+            departure_date: week.outbound,
+            return_date: week.inbound,
+          });
+
+          if (error) {
+            console.error(`  ❌ [${week.outbound}] DB 에러:`, error.message);
+          } else {
+            const diffStr = diff !== 0 ? ` (${diff > 0 ? "+" : ""}${diff.toLocaleString()})` : "";
+            console.log(`  ✅ [${week.outbound}] ${result.price.toLocaleString()}원${diffStr}`);
+
+            if (diff < -10000) {
+              await sendTelegramAlert(city.name, result.price, diff, week.outbound);
+            }
+          }
+        } else {
+          console.log(`  ⚠️ [${week.outbound}] 직항 없음`);
+        }
+
+        await new Promise((r) => setTimeout(r, 800));
+      } catch (e: any) {
+        console.error(`  ❌ [${week.outbound}] 에러:`, e.message);
+      }
+    }
+    console.log();
+  }
+
+  return apiCalls;
+}
+
+// 메인 실행 - 하이브리드 수집 엔진
 async function run() {
-  console.log("✈️ Supabase 수집기 시작...\n");
+  console.log("✈️ 하이브리드 수집 엔진 시작...\n");
+  console.log("=".repeat(50));
+
+  // 현재 시간 (KST)
+  const now = new Date();
+  const kstHour = (now.getUTCHours() + 9) % 24;
+  console.log(`⏰ 현재 시간: ${kstHour}시 (KST)\n`);
+
+  // 수집 대상 결정
+  const isDailyTime = kstHour >= 8 && kstHour <= 10; // 08~10시 사이면 일일 수집
+  const weekends = getNextWeekends();
+
+  console.log(`📅 수집 대상 주말: ${weekends.map((w) => w.outbound).join(", ")}`);
+  console.log(`🎯 Core 도시: ${CORE_CITIES.map((c) => c.code).join(", ")} (매 6시간)`);
+  console.log(`📌 Normal 도시: ${NORMAL_CITIES.map((c) => c.code).join(", ")} (1일 1회)`);
+  console.log("=".repeat(50));
 
   try {
     const token = await getAccessToken();
-    console.log("✅ Amadeus 토큰 획득\n");
+    console.log("\n✅ Amadeus 토큰 획득");
 
-    const weekends = getNextWeekends(4);
+    let totalCalls = 0;
 
-    for (const city of TARGET_CITIES) {
-      console.log(`📍 ${city.name} (${city.code})`);
+    // 1. Core 도시는 항상 수집 (6시간마다 실행되므로)
+    totalCalls += await collectCities(token, CORE_CITIES, weekends, "🔥 Core Cities");
 
-      for (const week of weekends) {
-        try {
-          const result = await fetchFlightPrice(
-            token,
-            city.code,
-            week.outbound,
-            week.inbound
-          );
-
-          if (result) {
-            // 이전 가격과 비교
-            const prevPrice = await getPreviousPrice(city.code, week.outbound);
-            const diff = prevPrice ? result.price - prevPrice : 0;
-
-            // DB 저장
-            const { error } = await supabase.from("price_history").insert({
-              route_code: city.code,
-              price: result.price,
-              departure_date: week.outbound,
-              return_date: week.inbound,
-            });
-
-            if (error) {
-              console.error(`  ❌ [${week.outbound}] DB 에러:`, error.message);
-            } else {
-              const diffStr = diff !== 0 ? ` (${diff > 0 ? "+" : ""}${diff.toLocaleString()})` : "";
-              console.log(
-                `  ✅ [${week.outbound}] ${result.price.toLocaleString()}원${diffStr}`
-              );
-
-              // 1만원 이상 하락시 텔레그램 알림
-              if (diff < -10000) {
-                await sendTelegramAlert(city.name, result.price, diff, week.outbound);
-              }
-            }
-          } else {
-            console.log(`  ⚠️ [${week.outbound}] 직항 없음`);
-          }
-
-          await new Promise((r) => setTimeout(r, 800));
-        } catch (e: any) {
-          console.error(`  ❌ [${week.outbound}] 에러:`, e.message);
-        }
-      }
-      console.log();
+    // 2. Normal 도시는 하루에 한 번만 (09시 KST)
+    if (isDailyTime) {
+      totalCalls += await collectCities(token, NORMAL_CITIES, weekends, "📊 Normal Cities");
+    } else {
+      console.log(`\n⏭️ Normal Cities 스킵 (일일 수집 시간 아님, 현재: ${kstHour}시)`);
     }
 
-    console.log("✨ 수집 완료!");
+    console.log("\n" + "=".repeat(50));
+    console.log(`✨ 수집 완료! API 호출: ${totalCalls}회`);
+    console.log(`📊 예상 월간 사용량: ~${Math.round(totalCalls * 30 * (isDailyTime ? 1 : 4))}회`);
+    console.log("=".repeat(50));
   } catch (error: any) {
     console.error("치명적 오류:", error.message);
     process.exit(1);

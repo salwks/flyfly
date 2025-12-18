@@ -1,9 +1,12 @@
-name: Flight Price Collector
+name: Flight Price Collector (Hybrid Engine)
 
 on:
   schedule:
-    # 매일 6시간마다 실행 (UTC 기준: 0시, 6시, 12시, 18시)
-    # 한국 시간으로는 9시, 15시, 21시, 3시
+    # 6시간마다 실행 (UTC: 0, 6, 12, 18시 = KST: 9, 15, 21, 3시)
+    # 하이브리드 전략:
+    # - Core 도시 (NRT, KIX, HKG): 매 실행 시 수집 (4회/일)
+    # - Normal 도시 (7개): 09시 KST에만 수집 (1회/일)
+    # - 월간 예상: ~1,140회 (무료 한도 2,000회의 57%)
     - cron: "0 0,6,12,18 * * *"
   workflow_dispatch: # 수동 실행 버튼
 
