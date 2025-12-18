@@ -94,6 +94,11 @@ interface PriceData {
   price: number;
   departure_date: string;
   return_date: string;
+  departure_time?: string;
+  arrival_time?: string;
+  return_departure_time?: string;
+  return_arrival_time?: string;
+  is_good_schedule?: boolean;
 }
 
 export function App() {
@@ -159,6 +164,11 @@ export function App() {
             price: row.price,
             departure_date: row.departure_date,
             return_date: row.return_date,
+            departure_time: row.departure_time,
+            arrival_time: row.arrival_time,
+            return_departure_time: row.return_departure_time,
+            return_arrival_time: row.return_arrival_time,
+            is_good_schedule: row.is_good_schedule,
           }));
         }
       }

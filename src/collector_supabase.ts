@@ -276,13 +276,39 @@ async function getAccessToken(): Promise<string> {
   return data.access_token;
 }
 
-// 항공권 가격 조회
+// 꽉 찬 일정 판별 (오전 출발 07:00-13:00, 오후 귀국 15:00-22:00)
+function isGoodSchedule(departureTime: string, returnDepartureTime: string): boolean {
+  const depHour = parseInt(departureTime.split(":")[0]);
+  const retHour = parseInt(returnDepartureTime.split(":")[0]);
+
+  const isGoodDeparture = depHour >= 7 && depHour <= 13;
+  const isGoodReturn = retHour >= 15 && retHour <= 22;
+
+  return isGoodDeparture && isGoodReturn;
+}
+
+// 시간 추출 (ISO 날짜에서 HH:MM 추출)
+function extractTime(isoDateTime: string): string {
+  return isoDateTime.split("T")[1]?.substring(0, 5) || "00:00";
+}
+
+// 항공권 가격 조회 (시간 정보 포함)
+interface FlightResult {
+  price: number;
+  airline: string;
+  departureTime: string;      // 출발 시간 (HH:MM)
+  arrivalTime: string;        // 도착 시간 (HH:MM)
+  returnDepartureTime: string; // 귀국편 출발 시간 (HH:MM)
+  returnArrivalTime: string;   // 귀국편 도착 시간 (HH:MM)
+  isGoodSchedule: boolean;     // 꽉 찬 일정 여부
+}
+
 async function fetchFlightPrice(
   token: string,
   dest: string,
   outDate: string,
   inDate: string
-) {
+): Promise<FlightResult | null> {
   const query = new URLSearchParams({
     originLocationCode: "ICN",
     destinationLocationCode: dest,
@@ -290,7 +316,7 @@ async function fetchFlightPrice(
     returnDate: inDate,
     adults: "1",
     currencyCode: "KRW",
-    max: "1",
+    max: "10",  // 여러 옵션 조회
     nonStop: "true",
   });
 
@@ -302,10 +328,37 @@ async function fetchFlightPrice(
   const json = await response.json();
   if (!json.data || json.data.length === 0) return null;
 
-  return {
-    price: Math.round(parseFloat(json.data[0].price.total)),
-    airline: json.data[0].validatingAirlineCodes[0],
-  };
+  // 모든 항공편 파싱
+  const flights: FlightResult[] = json.data.map((offer: any) => {
+    const outbound = offer.itineraries[0]?.segments[0];
+    const inbound = offer.itineraries[1]?.segments[0];
+
+    const departureTime = extractTime(outbound?.departure?.at || "");
+    const arrivalTime = extractTime(outbound?.arrival?.at || "");
+    const returnDepartureTime = extractTime(inbound?.departure?.at || "");
+    const returnArrivalTime = extractTime(inbound?.arrival?.at || "");
+
+    return {
+      price: Math.round(parseFloat(offer.price.total)),
+      airline: offer.validatingAirlineCodes[0],
+      departureTime,
+      arrivalTime,
+      returnDepartureTime,
+      returnArrivalTime,
+      isGoodSchedule: isGoodSchedule(departureTime, returnDepartureTime),
+    };
+  });
+
+  // 꽉 찬 일정 중 최저가 우선, 없으면 전체 최저가
+  const goodScheduleFlights = flights.filter(f => f.isGoodSchedule);
+
+  if (goodScheduleFlights.length > 0) {
+    // 꽉 찬 일정 중 최저가 반환
+    return goodScheduleFlights.reduce((min, f) => f.price < min.price ? f : min);
+  }
+
+  // 꽉 찬 일정 없으면 전체 최저가 반환
+  return flights.reduce((min, f) => f.price < min.price ? f : min);
 }
 
 // 도시 그룹 수집 함수
@@ -341,13 +394,20 @@ async function collectCities(
             price: result.price,
             departure_date: week.outbound,
             return_date: week.inbound,
+            departure_time: result.departureTime,
+            arrival_time: result.arrivalTime,
+            return_departure_time: result.returnDepartureTime,
+            return_arrival_time: result.returnArrivalTime,
+            is_good_schedule: result.isGoodSchedule,
           });
 
           if (error) {
             console.error(`  ❌ [${week.outbound}] DB 에러:`, error.message);
           } else {
             const diffStr = diff !== 0 ? ` (${diff > 0 ? "+" : ""}${diff.toLocaleString()})` : "";
-            console.log(`  ✅ [${week.outbound}] ${result.price.toLocaleString()}원${diffStr}`);
+            const scheduleIcon = result.isGoodSchedule ? "🌟" : "⏰";
+            const timeInfo = `${result.departureTime}→${result.arrivalTime} / ${result.returnDepartureTime}→${result.returnArrivalTime}`;
+            console.log(`  ✅ [${week.outbound}] ${result.price.toLocaleString()}원${diffStr} ${scheduleIcon} ${timeInfo}`);
 
             if (diff < -10000) {
               await sendTelegramAlert(city.name, city.code, result.price, diff, week.outbound);

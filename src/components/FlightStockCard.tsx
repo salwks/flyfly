@@ -6,6 +6,11 @@ interface PriceData {
   price: number;
   departure_date: string;
   return_date: string;
+  departure_time?: string;
+  arrival_time?: string;
+  return_departure_time?: string;
+  return_arrival_time?: string;
+  is_good_schedule?: boolean;
 }
 
 interface FlightStockCardProps {
@@ -126,7 +131,7 @@ export function FlightStockCard({ city, code, data, emoji = "✈️" }: FlightSt
         <div className="flex items-center gap-2">
           <span className="text-xl">{emoji}</span>
           <div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <h3 className="text-white font-bold text-sm">{city}</h3>
               <span
                 className={`${status.color} text-[8px] px-1.5 py-0.5 rounded-full font-bold text-white ${
@@ -135,8 +140,20 @@ export function FlightStockCard({ city, code, data, emoji = "✈️" }: FlightSt
               >
                 {status.label}
               </span>
+              {latestData?.is_good_schedule && (
+                <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-[8px] px-1.5 py-0.5 rounded-full font-bold text-white">
+                  꽉찬일정
+                </span>
+              )}
             </div>
-            <p className="text-slate-500 text-[10px]">ICN → {code}</p>
+            <p className="text-slate-500 text-[10px]">
+              ICN → {code}
+              {latestData?.departure_time && (
+                <span className="ml-1 text-slate-600">
+                  · {latestData.departure_time}출발
+                </span>
+              )}
+            </p>
           </div>
         </div>
 
