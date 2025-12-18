@@ -30,6 +30,44 @@ function getPriceStatus(current: number, data: PriceData[]) {
   return { label: "관망", color: "bg-slate-600", animate: false };
 }
 
+// 가격 인사이트 생성기
+function getPriceInsight(current: number, data: PriceData[], change: number) {
+  if (data.length < 3) return null;
+
+  const prices = data.map((d) => d.price);
+  const min = Math.min(...prices);
+  const avg = prices.reduce((a, b) => a + b) / prices.length;
+  const changePercent = Math.abs(Math.round((change / (current - change)) * 100));
+
+  // 역대 최저가
+  if (current <= min) {
+    return { text: "🔥 추적 기간 중 최저가! 지금이 구매 적기", highlight: true };
+  }
+
+  // 큰 폭 하락
+  if (change < -10000) {
+    return { text: `📉 ${Math.abs(change).toLocaleString()}원 급락! 놓치면 후회`, highlight: true };
+  }
+
+  // 평균 대비 저렴
+  if (current < avg * 0.95) {
+    const discount = Math.round(((avg - current) / avg) * 100);
+    return { text: `💡 평균보다 ${discount}% 저렴한 가격대`, highlight: false };
+  }
+
+  // 하락 추세
+  if (change < 0) {
+    return { text: `📊 전 수집 대비 ${changePercent}% 하락 중`, highlight: false };
+  }
+
+  // 상승 추세
+  if (change > 10000) {
+    return { text: `⚠️ 가격 상승 중, 추가 상승 가능성`, highlight: false };
+  }
+
+  return null;
+}
+
 export function FlightStockCard({ city, code, data, emoji = "✈️" }: FlightStockCardProps) {
   if (data.length === 0) {
     return (
@@ -77,6 +115,9 @@ export function FlightStockCard({ city, code, data, emoji = "✈️" }: FlightSt
 
   // 저점 판독
   const status = getPriceStatus(currentPrice, data);
+
+  // 가격 인사이트
+  const insight = getPriceInsight(currentPrice, data, change);
 
   return (
     <div className="bg-slate-900/80 border border-slate-800/50 rounded-2xl p-3 shadow-lg backdrop-blur-sm">
@@ -156,6 +197,17 @@ export function FlightStockCard({ city, code, data, emoji = "✈️" }: FlightSt
           </LineChart>
         </ResponsiveContainer>
       </div>
+
+      {/* 가격 인사이트 */}
+      {insight && (
+        <div className={`mt-2 px-2 py-1.5 rounded-lg text-[10px] text-center ${
+          insight.highlight
+            ? "bg-gradient-to-r from-emerald-500/20 to-blue-500/20 text-emerald-300 font-bold"
+            : "bg-slate-800/50 text-slate-400"
+        }`}>
+          {insight.text}
+        </div>
+      )}
 
       {/* 하단 정보 */}
       <div className="mt-2 pt-2 border-t border-slate-800/50">

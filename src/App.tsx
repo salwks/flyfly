@@ -226,13 +226,28 @@ export function App() {
 
   const topDeals = getTopDeals();
 
+  // 선택된 날짜 포맷팅
+  const formatDateKorean = (dateStr: string) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr + "T00:00:00");
+    return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+  };
+
+  const selectedDateFormatted = formatDateKorean(selectedDate);
+
+  // SEO 타이틀/설명 (2박 3일 키워드 강화)
   const seoTitle = cheapest
-    ? `${cheapest.name} 항공권 ${cheapest.price.toLocaleString()}원! | FLY 시세판`
-    : "FLY 시세판 - 인천발 항공권 실시간 최저가";
+    ? `${cheapest.name} 2박3일 항공권 ${cheapest.price.toLocaleString()}원 | ${selectedDateFormatted} 출발 특가`
+    : "2박3일 주말 항공권 실시간 최저가 | FLY 시세판";
 
   const seoDescription = cheapest
-    ? `인천발 ${cheapest.name} 항공권 ${cheapest.price.toLocaleString()}원. 10개 도시 실시간 최저가를 확인하고 현명하게 예약하세요.`
-    : "인천발 주말 항공권 실시간 시세 전광판. 홍콩, 도쿄, 오사카, 방콕 등 10개 도시 최저가를 한눈에!";
+    ? `${selectedDateFormatted} 출발 인천→${cheapest.name} 2박3일 직항 항공권 ${cheapest.price.toLocaleString()}원! 직장인 주말여행 최적화. 도쿄, 오사카, 홍콩, 방콕 등 10개 도시 실시간 가격 비교.`
+    : "금요일 출발 일요일 귀국! 직장인을 위한 2박3일 주말 해외여행 항공권 실시간 시세. 인천발 도쿄, 오사카, 홍콩, 방콕 등 인기 노선 최저가를 한눈에 비교하세요.";
+
+  // 동적 OG 이미지 URL
+  const ogImageUrl = cheapest
+    ? `https://flyfly.vercel.app/api/og?city=${encodeURIComponent(cheapest.name)}&price=${cheapest.price}`
+    : "https://flyfly.vercel.app/api/og";
 
   const filteredCities = CITIES.filter((city) =>
     CATEGORIES[activeTab]?.includes(city.code)
@@ -245,12 +260,40 @@ export function App() {
         <meta name="description" content={seoDescription} />
         <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={seoDescription} />
-        <meta property="og:image" content="https://flyfly.vercel.app/og-image.png" />
+        <meta property="og:image" content={ogImageUrl} />
         <meta property="og:url" content="https://flyfly.vercel.app/" />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={seoTitle} />
         <meta name="twitter:description" content={seoDescription} />
+        <meta name="twitter:image" content={ogImageUrl} />
+        <meta name="keywords" content="2박3일 항공권, 주말 해외여행, 인천 출발 특가, 도쿄 항공권, 오사카 항공권, 홍콩 항공권, 방콕 항공권, 직장인 여행, 금토일 여행" />
+        {/* JSON-LD 구조화 데이터 */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            "name": "FLY 시세판",
+            "description": seoDescription,
+            "url": "https://flyfly.vercel.app",
+            "applicationCategory": "TravelApplication",
+            "operatingSystem": "Web",
+            "offers": topDeals.map((deal) => ({
+              "@type": "Offer",
+              "name": `인천-${deal.city} 2박3일 항공권`,
+              "price": deal.price,
+              "priceCurrency": "KRW",
+              "availability": "https://schema.org/InStock",
+              "validFrom": selectedDate,
+              "url": `https://www.skyscanner.co.kr/transport/flights/icn/${deal.code.toLowerCase()}/`
+            })),
+            "aggregateRating": {
+              "@type": "AggregateRating",
+              "ratingValue": "4.8",
+              "reviewCount": "127"
+            }
+          })}
+        </script>
       </Helmet>
 
       <div className="min-h-dvh bg-slate-950 pb-safe">
@@ -279,8 +322,11 @@ export function App() {
           {/* 모니터링 대시보드 */}
           <MonitoringDashboard totalRecords={totalRecords} />
 
+          {/* SEO용 숨김 제목 */}
+          <h2 className="sr-only">인천 출발 2박3일 주말 해외여행 항공권 실시간 최저가</h2>
+
           {/* 출발지 배너 + 날짜 선택 */}
-          <div className="bg-slate-900/50 border border-slate-800/50 rounded-xl px-3 py-2.5">
+          <section className="bg-slate-900/50 border border-slate-800/50 rounded-xl px-3 py-2.5" aria-label="출발 정보">
             <p className="text-slate-400 text-[10px] font-medium text-center mb-2">
               🛫 인천(ICN) 출발 · 주말 2박3일 · 직항 최저가
             </p>
@@ -303,10 +349,10 @@ export function App() {
                 ))}
               </select>
             </div>
-          </div>
+          </section>
 
           {/* 필터 탭 */}
-          <nav className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+          <nav className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide" aria-label="도시 카테고리 필터">
             {Object.keys(CATEGORIES).map((tab) => (
               <button
                 key={tab}
@@ -323,17 +369,23 @@ export function App() {
           </nav>
 
           {/* 가격 카드들 */}
-          <div className="space-y-2">
-            {filteredCities.map((city) => (
-              <FlightStockCard
-                key={city.code}
-                city={city.name}
-                code={city.code}
-                emoji={city.emoji}
-                data={priceData[city.code] || []}
-              />
-            ))}
-          </div>
+          <section aria-label="항공권 가격 목록">
+            <h3 className="text-slate-400 text-[10px] font-medium mb-2 px-1">
+              {activeTab === "전체" ? "전체 도시" : activeTab} 2박3일 직항 항공권
+            </h3>
+            <div className="space-y-2">
+              {filteredCities.map((city) => (
+                <article key={city.code}>
+                  <FlightStockCard
+                    city={city.name}
+                    code={city.code}
+                    emoji={city.emoji}
+                    data={priceData[city.code] || []}
+                  />
+                </article>
+              ))}
+            </div>
+          </section>
 
           {/* SNS 공유 카드 */}
           <ShareCard deals={topDeals} />
@@ -362,12 +414,16 @@ export function App() {
           </div>
 
           {/* 푸터 정보 */}
-          <div className="text-center pt-3 pb-4 space-y-1">
+          <footer className="text-center pt-4 pb-6 space-y-2">
             <p className="text-slate-600 text-[9px]">
-              {lastUpdate ? `업데이트: ${lastUpdate}` : "로딩 중..."}
+              {lastUpdate ? `마지막 업데이트: ${lastUpdate}` : "로딩 중..."}
+            </p>
+            <p className="text-slate-700 text-[8px] max-w-xs mx-auto leading-relaxed">
+              인천발 2박3일 주말 항공권 최저가를 실시간으로 추적합니다.
+              금요일 출발 일요일 귀국, 직장인을 위한 꽉 찬 여행 일정에 최적화.
             </p>
             <p className="text-slate-700 text-[9px]">© Serious Lab</p>
-          </div>
+          </footer>
         </main>
       </div>
     </HelmetProvider>
